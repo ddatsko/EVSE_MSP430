@@ -12,12 +12,10 @@ inline void transmitCallback() {
 __interrupt void UsciI2CDataIsr(void)
 {
     if (IFG2 & UCB0TXIFG) {     // transmit request
-        //UCB0TXBUF = 10;
-        sendMessage(WRITE_BYTE_REQUEST);
+        transmitCallback();
 
     } else {        // receiving a byte
-       // message[curMessageChar++] = UCB0RXBUF;
-        sendMessage(READ_BYTE_READY);
+        message[curMessageChar++] = UCB0RXBUF;
     }
 }
 
@@ -27,11 +25,9 @@ __interrupt void UsciI2CStateIsr(void)
 {
     if (UCB0STAT & UCSTTIFG) {      // Start condition interrupt
         UCB0STAT &= ~UCSTTIFG;      // Clear start condition int flag
-        //curMessageChar = 0;     // reset the position of message pointer
-        sendMessage(START_SIGNAL);
+        curMessageChar = 0;     // reset the position of message pointer
     } else if (UCB0STAT & UCSTPIFG) {       // Stop condition interrupt
         UCB0STAT &= ~UCSTPIFG;      // Clear stop condition int flag
-        sendMessage(STOP_SIGNAL);
     }
 }
 
