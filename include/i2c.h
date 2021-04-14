@@ -7,13 +7,17 @@
 #define SDA_PIN BIT7
 #define SCL_PIN BIT6
 #define OWN_ADDRESS 1
+#define MAX_MSG_LENGTH 100
+
+
+extern char *nextReadBuf;
+extern char *nextWriteBuf;
+
+
 
 void I2CInit();
 
 char* I2CGetReceivedMessage();
 
-char I2CReadByte();
-
-void I2CWriteByte(char byte);
 
 #endif /* INCLUDE_I2C_H_ */

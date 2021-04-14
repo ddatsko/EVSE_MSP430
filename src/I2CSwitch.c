@@ -1,94 +1,59 @@
+#include <I2CSwitch.h>
 #include <msp430.h>
-#include "i2c_switch.h"
 #include "messages.h"
 #include "i2c.h"
 
 
 #define STATE_INIT 0
-#define STATE_MSG_IS_READING 1
-#define STATE_MSG_IS_READ 2
-#define STATE_CALC_RESPONSE 3
-#define STATE_SEND_RESP_NOT_READY 4
-#define STATE_SEND_RESP 5
+#define STATE_MESSAGE_PROCESS 1
 
-char calculating;
-char newByte;
-char respReady;
+// Buffers for reading the mssage to and for sending the message from
+char writeBufs[2][MAX_MSG_LENGTH];
+unsigned char curWriteBuf;
+
+char readBufs[2][MAX_MSG_LENGTH];
+unsigned char curReadBuf;
+
 char curState;
 
-char receiveMsgIndex;
-char sendMsgIndex;
-char sendMsgSize;
-char buf1[50];
-char buf2[50];
-
-
-char *receivingBuf;
-char *calculatingBuf;
-
-char respBuf[50];
 
 void I2CSwitchInit() {
-
-    calculating = 0;
-    newByte = 0;
-    respReady = 0;
+    curWriteBuf = 0;
+    curReadBuf = 0;
+    nextReadBuf = readBufs[curReadBuf];
     curState = STATE_INIT;
 }
 
 
-void I2CProcess() {
-
-
-    switch(curState) {
-        case STATE_INIT:
-            if (getMessage(WRITE_BYTE_REQUEST) == 1) {
-                if (respReady == 1) {
-                    respReady = 0;
-                    curState = STATE_SEND_RESP;
-                }
-            } else if (getMessage(START_SIGNAL) == 1) {
-                receiveMsgIndex = 0;
-                curState = STATE_MSG_IS_READING;
-            } else if (getMessage(STOP_SIGNAL) == 1 || getMessage(READ_BYTE_READY) == 1) {
-                // Maybe go to some error state here
-            }
-
-            break;
-
-
-
-        case STATE_MSG_IS_READING:
-            if (getMessage(READ_BYTE_READY) == 1) {
-                receivingBuf[receiveMsgIndex++] = I2CReadByte();
-            }
-            else if (getMessage(STOP_SIGNAL) == 1) {
-                if (calculating) {
-
-                } else {
-                     char *tmp = receivingBuf;
-                     receivingBuf = calculatingBuf;
-                     calculatingBuf = tmp;
-                }
-            }
-
-            break;
-
-        case STATE_MSG_IS_READ:
-
-
-            break;
-        case STATE_CALC_RESPONSE:
-
-            break;
-
-        case STATE_SEND_RESP_NOT_READY:
-
-            break;
-
-        case STATE_SEND_RESP:
-
-
-            break;
+unsigned char packetNumber = 0; // just for test
+void processMessage(char *msg, char *responseDest) {
+    packetNumber++;
+    unsigned int i;
+    for (i = 0; i < MAX_MSG_LENGTH; i++) {
+        responseDest[i] = packetNumber;
     }
+}
+
+
+void I2CSwitchProcess() {
+
+    if (curState == STATE_INIT) {
+            if (getMessage(READ_STOP)) {
+                curReadBuf ^= 1;
+                nextReadBuf = readBufs[curReadBuf];
+                curState = STATE_MESSAGE_PROCESS;
+            }
+    }
+    if (curState == STATE_MESSAGE_PROCESS) {
+            processMessage(readBufs[curReadBuf ^ 1u], writeBufs[curWriteBuf ^ 1u]);
+            if (!getMessage(READ_STOP)) {
+                curWriteBuf ^= 1;
+                nextWriteBuf = writeBufs[curWriteBuf];
+                curState = STATE_INIT;
+            } else {    // If a new message was got during the processing, do not respond to the previous one
+                curReadBuf ^= 1;
+                nextReadBuf = readBufs[curReadBuf];
+            }
+    }
+
 }

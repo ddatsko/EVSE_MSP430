@@ -1,23 +1,39 @@
 #include "i2c.h"
 #include "messages.h"
 
-char message[256];
-unsigned char curMessageChar;
 
-inline void transmitCallback() {
-    UCB0TXBUF = 10;
-}
+char *readBuf = (char *)0;
+char *writeBuf = (char *)0;
+
+char *nextReadBuf = (char *)0;
+char *nextWriteBuf = (char *)0;
+
+char dummy;
+unsigned char curMessageIndex;
+char reading;
+
 
 #pragma vector=USCIAB0TX_VECTOR
 __interrupt void UsciI2CDataIsr(void)
 {
+    if (curMessageIndex == MAX_MSG_LENGTH) {
+        // Maybe, should send a message about the situation
+        curMessageIndex = 0;
+    }
     if (IFG2 & UCB0TXIFG) {     // transmit request
-        //UCB0TXBUF = 10;
-        sendMessage(WRITE_BYTE_REQUEST);
-
+        reading = 0;
+        if (writeBuf == (char *)0) {
+            UCB0TXBUF = 0;  // Sending 0-s if the response is not ready yet
+        } else {
+            UCB0TXBUF = writeBuf[curMessageIndex++];
+        }
     } else {        // receiving a byte
-       // message[curMessageChar++] = UCB0RXBUF;
-        sendMessage(READ_BYTE_READY);
+        reading = 1;
+        if (readBuf != (char *)0) {
+            readBuf[curMessageIndex++] = UCB0RXBUF;
+        } else {
+            dummy = UCB0RXBUF;
+        }
     }
 }
 
@@ -27,14 +43,21 @@ __interrupt void UsciI2CStateIsr(void)
 {
     if (UCB0STAT & UCSTTIFG) {      // Start condition interrupt
         UCB0STAT &= ~UCSTTIFG;      // Clear start condition int flag
-        //curMessageChar = 0;     // reset the position of message pointer
-        sendMessage(START_SIGNAL);
+        curMessageIndex = 0;     // reset the position of message pointe
+        writeBuf = nextWriteBuf;
+        readBuf = nextReadBuf;
     } else if (UCB0STAT & UCSTPIFG) {       // Stop condition interrupt
         UCB0STAT &= ~UCSTPIFG;      // Clear stop condition int flag
-        sendMessage(STOP_SIGNAL);
+
+        if (reading) {
+            nextReadBuf = 0;
+            sendMessage(READ_STOP);
+        } else {
+            nextWriteBuf = 0;
+            sendMessage(WRITE_STOP);
+        }
     }
 }
-
 
 void I2CInit() {
     P1SEL |= SDA_PIN + SCL_PIN;
@@ -50,11 +73,3 @@ void I2CInit() {
 
 }
 
-
-char I2CReadByte() {
-    return UCB0RXBUF;
-}
-
-void I2CWriteByte(char byte) {
-    UCB0TXBUF = byte;
-}

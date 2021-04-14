@@ -1,45 +1,39 @@
-#include "avse_tools.h"
+#include "evseTools.h"
 
 
 
 void gfIntInit() {
-    AVSE_PORT_REN &= ~(AVSE_BIT);  // Disabe pull-up and pull-down
-    AVSE_PORT_DIR &= ~(AVSE_BIT);  // Set pin direction to input
+    EVSE_PORT_REN &= ~(EVSE_BIT);  // Disabe pull-up and pull-down
+    EVSE_PORT_DIR &= ~(EVSE_BIT);  // Set pin direction to input
 
-    AVSE_INT_IE |= AVSE_BIT;        // Enable interrupts on pin
-    AVSE_INT_IES &= ~(AVSE_BIT);    // Set interrupt on rising edge
-    AVSE_INT_IFG &= ~(AVSE_BIT);    // IFG cleared
+    EVSE_INT_IE |= EVSE_BIT;        // Enable interrupts on pin
+    EVSE_INT_IES &= ~(EVSE_BIT);    // Set interrupt on rising edge
+    EVSE_INT_IFG &= ~(EVSE_BIT);    // IFG cleared
 
    // _BIS_SR(LPM4_bits + GIE);        // LPM4 mode
 }
 
 
-#pragma vector=AVSE_VECTOR
+#pragma vector=EVSE_VECTOR
 __interrupt void inter(void) {
-    P1OUT ^= 0x01;   // Toggle LED
-    volatile unsigned int i;
-    for ( i = 0; i < 10000; i++) {}
-    AVSE_INT_IFG &= ~(AVSE_BIT);
+    P1OUT ^= 0x01;   // Toggle LED}
+    EVSE_INT_IFG &= ~(EVSE_BIT);
 }
 
 
 void gfIntReset() {
-    AVSE_PORT_DIR |= AVSE_BIT;       // Set pin direction to output
-    AVSE_PORT_OUTPUT &= ~(AVSE_BIT); // Write 0 to the pin
+    EVSE_PORT_DIR |= EVSE_BIT;       // Set pin direction to output
+    EVSE_PORT_OUTPUT &= ~(EVSE_BIT); // Write 0 to the pin
     _nop();
     _nop();
-    AVSE_PORT_DIR &= ~(AVSE_BIT);   // Set pin direction to input
+    EVSE_PORT_DIR &= ~(EVSE_BIT);   // Set pin direction to input
 }
 
 void adcInit() {
 
     ADC10CTL0 &= ~(ENC);  // To safely modify other parts of the register
 
-
-
     ADC10AE0 |= ADC_INPUT_PIN;  // Enable Analog input on selected pin
-
-
 
     ADC10CTL0 = SREF_0;         // VR+ = VCC and VR- = VSS
     ADC10CTL0 += ADC10SHT_2;    // 16 × ADC10CLKs
@@ -67,7 +61,7 @@ int emasureAdcData() {
 
 // Any additional Dividers and clock sources should be configured here.
 // Currently,the PWM frequency is about 1.05 kHz on MSP430G2553. By decrementing the TA0CCR0 it can be fit to 1 kHz
-void pwm_init(int duty_cycle) {  // Duty cycle should be from 0 to 1000
+void pwmInit(int duty_cycle) {  // Duty cycle should be from 0 to 1000
     P1DIR |= PWM_PIN;                  // P1.2 set as output
     P1SEL |= PWM_PIN;                  // P1.2 selected Timer0_A Out1
 
