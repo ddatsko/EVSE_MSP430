@@ -1,5 +1,5 @@
+#include <evseTools.h>
 #include <msp430.h>
-#include "avse_tools.h"
 #include "i2c.h"
 
 
@@ -27,9 +27,7 @@ void main(void)
 
 	while(1)
 	{
-	    adc_data = measureAdcData();
-	    adc_voltage = (adc_data * 3);
-	    _nop();
+	    I2CSwitchProcess();
 	}
 }
 
